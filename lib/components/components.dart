@@ -5,17 +5,16 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'constants.dart';
 
 class CustomButton extends StatelessWidget {
-  const CustomButton(
-      {super.key,
-      required this.buttonText,
-      this.isOutlined = false,
-      required this.onPressed,
-      this.width = 280});
+  const CustomButton({
+    super.key,
+    required this.buttonText,
+    this.isOutlined = false,
+    required this.onPressed,
+  });
 
   final String buttonText;
   final bool isOutlined;
   final Function onPressed;
-  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -23,28 +22,67 @@ class CustomButton extends StatelessWidget {
       onTap: () {
         onPressed();
       },
-      child: Material(
-        borderRadius: BorderRadius.circular(30),
-        elevation: 4,
-        child: Container(
-          width: width,
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: isOutlined ? Colors.white : kTextColor,
-            border: Border.all(color: kTextColor, width: 2.5),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Center(
-            child: Text(
-              buttonText,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: isOutlined ? kTextColor : Colors.white,
-              ),
+      child: Container(
+        width: 300,
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: isOutlined ? Colors.white : kTextColor,
+          border: Border.all(color: kTextColor, width: 2.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            buttonText,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: isOutlined ? kTextColor : Colors.white,
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class CustomTextField2 extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  String hinttext;
+
+  CustomTextField2({
+    required this.controller,
+    required this.onChanged,
+    required this.hinttext,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 56, 56, 56),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.black),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search, color: Colors.white), // Search icon
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: hinttext,
+                hintStyle: TextStyle(color: Colors.grey),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -77,31 +115,32 @@ class ScreenTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 40,
-        fontWeight: FontWeight.bold,
-      ),
+          fontSize: 40, fontWeight: FontWeight.bold, color: kTextColor),
     );
   }
 }
 
 class CustomTextField extends StatelessWidget {
-  CustomTextField({super.key, required this.textField});
+  CustomTextField({super.key, required this.textField, required this.icon});
   final TextField textField;
+  final Icon icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 30,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(
-          width: 2.5,
-          color: kTextColor,
-        ),
+        color: const Color.fromARGB(255, 56, 56, 56),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.black),
       ),
-      child: textField,
+      child: Row(
+        children: [
+          icon, // Custom icon
+          const SizedBox(width: 10),
+          Expanded(child: textField),
+        ],
+      ),
     );
   }
 }
@@ -110,36 +149,22 @@ class CustomBottomScreen extends StatelessWidget {
   const CustomBottomScreen({
     super.key,
     required this.textButton,
-    required this.question,
     this.heroTag = '',
     required this.buttonPressed,
-    required this.questionPressed,
   });
   final String textButton;
-  final String question;
+
   final String heroTag;
   final Function buttonPressed;
-  final Function questionPressed;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: GestureDetector(
-            onTap: () {
-              questionPressed();
-            },
-            child: Text(question),
-          ),
-        ),
-        Expanded(child: Container()),
         SizedBox(
-          width: 100,
           child: Align(
-            alignment: Alignment.centerRight,
+            alignment: Alignment.center,
             child: Hero(
               tag: heroTag,
               child: CustomButton(

@@ -1,3 +1,5 @@
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/components.dart';
 import 'package:event_manager/screens/eventDetailScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,11 +8,16 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../components/constants.dart';
+
 class ViewEvents extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 49, 49, 49),
+        foregroundColor: Colors.white,
         title: const Text('Events'),
       ),
       body: EventList(),
@@ -66,15 +73,15 @@ class _EventListState extends State<EventList> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(
-            hintText: 'Search by name , facilites , food menu',
-            prefixIcon: Icon(Icons.search),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+          child: CustomTextField2(
+            controller: _searchController,
+            hinttext: 'Search by name , facilities , menu',
+            onChanged: (query) {
+              setState(() {}); // Trigger rebuild on text change
+            },
           ),
-          onChanged: (query) {
-            setState(() {}); // Trigger rebuild on text change
-          },
         ),
         Expanded(
           child: FutureBuilder(
@@ -84,8 +91,8 @@ class _EventListState extends State<EventList> {
                 .get(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(),
+                return Center(
+                  child: loadingWidget2(),
                 );
               }
               if (snapshot.hasError) {
@@ -117,8 +124,8 @@ class _EventListState extends State<EventList> {
                         (context, AsyncSnapshot<QuerySnapshot> eventSnapshot) {
                       if (eventSnapshot.connectionState ==
                           ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
+                        return Center(
+                          child: loadingWidget2(),
                         );
                       }
                       if (eventSnapshot.hasError) {
@@ -466,108 +473,190 @@ class _EventCardState extends State<EventCard> {
 
     String eventAddress = widget.event['eventAddress'];
 
-    List<String> imageUrls = List<String>.from(widget.event['imageUrls'] ?? []);
+    String imageUrls = (widget.event['imageUrls'][0] ?? []);
     String eventId = widget.event.id;
 
     print('Event ID$eventId');
 
     // Assume 'event' collection is where the event is stored
-
-    return Card(
-      margin: const EdgeInsets.all(10),
-      elevation: 4,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          ListTile(
-            title: Text(
-              eventName,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        elevation: 5,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.red.shade900, Colors.red.shade400],
+              ),
             ),
-          ),
-          ListTile(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            height: 250,
+            child: Column(
               children: [
-                GestureDetector(
-                  onTap: () {
-                    // Implement your logic to show address on map
-                  },
-                  child: GestureDetector(
-                    onTap: () async {
-                      try {
-                        List<Location> locations =
-                            await locationFromAddress(eventAddress);
-                        if (locations.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => MapPage(
-                                latitude: locations.first.latitude,
-                                longitude: locations.first.longitude,
-                              ),
-                            ),
-                          );
-                        }
-                      } on PlatformException catch (e) {
-                        // Handle the exception
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: ${e.message}')),
-                        );
-                      } catch (e) {
-                        // Handle other types of exceptions
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('An error occurred')),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    imageUrls,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (BuildContext context, Widget child,
+                        ImageChunkEvent? loadingProgress) {
+                      if (loadingProgress == null) {
+                        return child;
+                      } else {
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
                         );
                       }
                     },
-                    child: const Row(
-                      children: <Widget>[
-                        Icon(Icons.map, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text(
-                          'Show on Map',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  eventAddress,
-                  style: const TextStyle(fontSize: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 8.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        eventName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              maxLines: 1,
+                              eventAddress,
+                              style: const TextStyle(
+                                  overflow: TextOverflow.ellipsis,
+                                  fontSize: 16,
+                                  color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          if (imageUrls.isNotEmpty)
-            SizedBox(
-              height: 150,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: imageUrls.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        imageUrls[index],
-                        width: 200,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
+        ),
       ),
     );
+    // return Card(
+    //   margin: const EdgeInsets.all(10),
+    //   elevation: 4,
+    //   child: Column(
+    //     crossAxisAlignment: CrossAxisAlignment.start,
+    //     children: <Widget>[
+    //       ListTile(
+    //         title: Text(
+    //           eventName,
+    //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+    //         ),
+    //       ),
+    //       ListTile(
+    //         title: Column(
+    //           crossAxisAlignment: CrossAxisAlignment.start,
+    //           children: [
+    //             GestureDetector(
+    //               onTap: () {
+    //                 // Implement your logic to show address on map
+    //               },
+    //               child: GestureDetector(
+    //                 onTap: () async {
+    //                   try {
+    //                     List<Location> locations =
+    //                         await locationFromAddress(eventAddress);
+    //                     if (locations.isNotEmpty) {
+    //                       Navigator.push(
+    //                         context,
+    //                         MaterialPageRoute(
+    //                           builder: (context) => MapPage(
+    //                             latitude: locations.first.latitude,
+    //                             longitude: locations.first.longitude,
+    //                           ),
+    //                         ),
+    //                       );
+    //                     }
+    //                   } on PlatformException catch (e) {
+    //                     // Handle the exception
+    //                     ScaffoldMessenger.of(context).showSnackBar(
+    //                       SnackBar(content: Text('Error: ${e.message}')),
+    //                     );
+    //                   } catch (e) {
+    //                     // Handle other types of exceptions
+    //                     ScaffoldMessenger.of(context).showSnackBar(
+    //                       SnackBar(content: Text('An error occurred')),
+    //                     );
+    //                   }
+    //                 },
+    //                 child: const Row(
+    //                   children: <Widget>[
+    //                     Icon(Icons.map, color: Colors.blue),
+    //                     SizedBox(width: 8),
+    //                     Text(
+    //                       'Show on Map',
+    //                       style: TextStyle(
+    //                         color: Colors.blue,
+    //                         fontSize: 16,
+    //                       ),
+    //                     ),
+    //                   ],
+    //                 ),
+    //               ),
+    //             ),
+    //             const SizedBox(height: 4),
+    //             Text(
+    //               eventAddress,
+    //               style: const TextStyle(fontSize: 16),
+    //             ),
+    //           ],
+    //         ),
+    //       ),
+    //       if (imageUrls.isNotEmpty)
+    //         SizedBox(
+    //           height: 150,
+    //           child: ListView.builder(
+    //             scrollDirection: Axis.horizontal,
+    //             itemCount: imageUrls.length,
+    //             itemBuilder: (context, index) {
+    //               return Padding(
+    //                 padding: const EdgeInsets.all(8.0),
+    //                 child: ClipRRect(
+    //                   borderRadius: BorderRadius.circular(10),
+    //                   child: Image.network(
+    //                     imageUrls[index],
+    //                     width: 200,
+    //                     fit: BoxFit.cover,
+    //                   ),
+    //                 ),
+    //               );
+    //             },
+    //           ),
+    //         ),
+    //     ],
+    //   ),
+    // );
   }
 }
 

@@ -1,6 +1,8 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/bottomNav.dart';
 import 'package:event_manager/components/components.dart';
 import 'package:event_manager/components/constants.dart';
 import 'package:event_manager/components/provider.dart';
@@ -13,6 +15,7 @@ import 'package:event_manager/shared/functions.dart';
 import 'package:event_manager/shared/routes.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:loading_overlay/loading_overlay.dart';
 
@@ -58,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => HomeScreen(),
+        builder: (context) => const BottomTabsPage(),
       ),
     );
   }
@@ -225,215 +228,272 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
-      body: LoadingOverlay(
-        isLoading: _saving,
-        child: SafeArea(
-          child: Padding(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(children: [
+          Padding(
             padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                const TopScreenImage(screenImageName: 'logo.png'),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const ScreenTitle(title: 'Login'),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10.0),
-                        child: CustomTextField(
+            child: Stack(children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  //  const TopScreenImage(screenImageName: 'logo.png'),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const ScreenTitle(title: 'Login'),
+                        const Text(
+                          'Login to your account',
+                          style: TextStyle(fontSize: 14, color: Colors.white),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10.0),
+                          child: CustomTextField(
+                            icon: const Icon(Icons.person),
+                            textField: TextField(
+                                onChanged: (value) {
+                                  _email = value;
+                                },
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                                decoration: kTextInputDecoration.copyWith(
+                                    hintText: 'Email')),
+                          ),
+                        ),
+                        CustomTextField(
+                          icon: const Icon(Icons.password),
                           textField: TextField(
-                              onChanged: (value) {
-                                _email = value;
-                              },
-                              style: const TextStyle(
-                                fontSize: 12,
-                              ),
-                              decoration: kTextInputDecoration.copyWith(
-                                  hintText: 'Email')),
-                        ),
-                      ),
-                      CustomTextField(
-                        textField: TextField(
-                          obscureText: true,
-                          onChanged: (value) {
-                            _password = value;
-                          },
-                          style: const TextStyle(
-                            fontSize: 12,
-                          ),
-                          decoration: kTextInputDecoration.copyWith(
-                              hintText: 'Password'),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: isAdminCheckButton,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                isAdminCheckButton = value ?? false;
-                              });
+                            obscureText: true,
+                            onChanged: (value) {
+                              _password = value;
                             },
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                            decoration: kTextInputDecoration.copyWith(
+                                hintText: 'Password'),
                           ),
-                          const Text('Log in as Admin')
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10.0),
-                        child: CustomBottomScreen(
-                          textButton: 'Login',
-                          heroTag: 'login_btn',
-                          question: 'Forgot password?',
-                          buttonPressed: () async {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            setState(() {
-                              _saving = true;
-                            });
-
-                            if (_email.isEmpty || _password.isEmpty) {
-                              _setSavingState(false);
-                              _showSnackBar(
-                                  'Email and password cannot be empty.');
-                              return;
-                            }
-                            if (isAdminCheckButton) {
-                              final bool isAdmin = await checkAdmin(_email);
-                              if (isAdmin) {
-                                _navigateToAdminScreen(context);
-                              } else {
-                                _setSavingState(false);
-                                _showSnackBar(
-                                    'You are not authorized to log in as admin.');
-                              }
-                            } else {
-                              try {
-                                final UserCredential userCredential =
-                                    await _auth.signInWithEmailAndPassword(
-                                  email: _email,
-                                  password: _password,
-                                );
-
-                                final User? user = userCredential.user;
-
-                                if (user != null) {
-                                  final username =
-                                      await _fetchUsernameFromFirestore(_email);
-                                  String userId =
-                                      await _fetchUserIdFromFirestore(_email);
-                                  String? userId2 =
-                                      await _fetchUserdocIdFromFirestore(
-                                          _email);
-                                  SharedPreferences prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setString('email', _email);
-                                  await prefs.setString('username', username!);
-                                  await prefs.setString('userid', userId!);
-                                  await prefs.setString('userdocid', userId2!);
-                                  await prefs.setBool('isUserLoggedIn', true);
-
-                                  print('object');
-                                  print(userId2);
+                        ),
+                        Row(
+                          children: [
+                            Checkbox(
+                              activeColor: Colors.red,
+                              checkColor: Colors.white,
+                              value: isAdminCheckButton,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  isAdminCheckButton = value ?? false;
+                                });
+                              },
+                            ),
+                            const Text(
+                              'Log in as Admin',
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.white),
+                            ),
+                            Expanded(child: Container()),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10.0),
+                              child: GestureDetector(
+                                onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => HomeScreen(),
+                                      builder: (context) =>
+                                          const SignUpScreen(),
                                     ),
                                   );
-                                }
-                              } catch (e) {
-                                _showErrorDialog();
-                              } finally {
-                                _setSavingState(false);
-                              }
-                            }
-                          },
-                          questionPressed: () async {
-                            try {
-                              await FirebaseAuth.instance
-                                  .sendPasswordResetEmail(email: _email);
-                              _showSnackBar('Password reset email sent.');
-                            } catch (e) {
-                              _showErrorDialog();
-                            }
-                          },
+                                },
+                                child: const Text(
+                                  "Sign up",
+                                  style: TextStyle(
+                                    color: kTextColor,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
                         ),
-                      ),
-                      const Text(
-                        'Sign in using',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ValueListenableBuilder(
-                              valueListenable: userCredential,
-                              builder:
-                                  (BuildContext context, value, Widget? child) {
-                                return IconButton(
-                                  onPressed: () async {
-                                    userCredential.value =
-                                        await SignIn().signInWithGoogle();
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10.0,
+                              ),
+                              child: CustomBottomScreen(
+                                textButton: 'Login',
+                                heroTag: 'login_btn',
+                                buttonPressed: () async {
+                                  FocusManager.instance.primaryFocus?.unfocus();
+                                  setState(() {
+                                    _saving = true;
+                                  });
 
-                                    if (userCredential.value != null) {
-                                      print(userCredential.value!.user!.email);
-                                      _navigateToMainScreen();
+                                  if (_email.isEmpty || _password.isEmpty) {
+                                    _setSavingState(false);
+                                    _showSnackBar(
+                                        'Email and password cannot be empty.');
+                                    return;
+                                  }
+                                  if (isAdminCheckButton) {
+                                    final bool isAdmin =
+                                        await checkAdmin(_email);
+                                    if (isAdmin) {
+                                      _navigateToAdminScreen(context);
+                                    } else {
+                                      _setSavingState(false);
+                                      _showSnackBar(
+                                          'You are not authorized to log in as admin.');
                                     }
-                                  },
-                                  icon: CircleAvatar(
-                                    radius: 25,
-                                    backgroundColor: Colors.transparent,
-                                    child: Image.asset(
-                                        'assets/images/icons/google.png'),
-                                  ),
-                                );
-                              }),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Dont have account?",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
+                                  } else {
+                                    try {
+                                      final UserCredential userCredential =
+                                          await _auth
+                                              .signInWithEmailAndPassword(
+                                        email: _email,
+                                        password: _password,
+                                      );
+
+                                      final User? user = userCredential.user;
+
+                                      if (user != null) {
+                                        final username =
+                                            await _fetchUsernameFromFirestore(
+                                                _email);
+                                        String userId =
+                                            await _fetchUserIdFromFirestore(
+                                                _email);
+                                        String? userId2 =
+                                            await _fetchUserdocIdFromFirestore(
+                                                _email);
+                                        SharedPreferences prefs =
+                                            await SharedPreferences
+                                                .getInstance();
+                                        await prefs.clear();
+                                        await prefs.setString('email', _email);
+                                        await prefs.setString(
+                                            'username', username!);
+                                        await prefs.setString(
+                                            'userid', userId!);
+                                        await prefs.setString(
+                                            'userdocid', userId2!);
+                                        await prefs.setBool(
+                                            'isUserLoggedIn', true);
+
+                                        print('object');
+                                        print(userId2);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const BottomTabsPage(),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      _showErrorDialog();
+                                    } finally {
+                                      _setSavingState(false);
+                                    }
+                                  }
+                                },
+                              ),
                             ),
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SignUpScreen(),
-                                  ),
-                                );
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                try {
+                                  await FirebaseAuth.instance
+                                      .sendPasswordResetEmail(email: _email);
+                                  _showSnackBar('Password reset email sent.');
+                                } catch (e) {
+                                  _showErrorDialog();
+                                }
                               },
-                              child: const Text(
-                                "Sign up",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 16,
+                              child: const SizedBox(
+                                height: 50,
+                                child: Text(
+                                  'Forgot Password?',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ),
-                          )
-                        ],
-                      )
-                    ],
+                          ],
+                        ),
+                        const Divider(
+                          color: Colors.red,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Or Sign in using',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ValueListenableBuilder(
+                                valueListenable: userCredential,
+                                builder: (BuildContext context, value,
+                                    Widget? child) {
+                                  return IconButton(
+                                    onPressed: () async {
+                                      userCredential.value =
+                                          await SignIn().signInWithGoogle();
+
+                                      if (userCredential.value != null) {
+                                        print(
+                                            userCredential.value!.user!.email);
+                                        _navigateToMainScreen();
+                                      }
+                                    },
+                                    icon: CircleAvatar(
+                                      radius: 25,
+                                      backgroundColor: Colors.transparent,
+                                      child: Image.asset(
+                                          'assets/images/icons/google.png'),
+                                    ),
+                                  );
+                                }),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+              if (_saving) Center(child: loadingWidget())
+            ]),
           ),
-        ),
+        ]),
       ),
     );
   }

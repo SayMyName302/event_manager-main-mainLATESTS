@@ -227,7 +227,10 @@ class _UpdateScreenState extends State<UpdateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        foregroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 22, 22, 22),
         title: const Text('Edit Event'),
         actions: [
           IconButton(
@@ -245,22 +248,62 @@ class _UpdateScreenState extends State<UpdateScreen> {
           children: [
             TextFormField(
               controller: _eventNameController,
-              decoration: const InputDecoration(labelText: 'Event Name'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Event Name',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
             ),
             TextFormField(
               controller: _eventCapacity,
-              decoration: const InputDecoration(labelText: 'Complex Capacity'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Complex Capacity',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
             ),
             TextFormField(
               readOnly: true,
               controller: _eventDateController,
-              decoration: const InputDecoration(labelText: 'Event Date'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Event Date',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
               onTap: _pickDate,
             ),
             TextFormField(
               readOnly: true,
               controller: _eventDetailsController,
-              decoration: const InputDecoration(labelText: 'Event Details'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Event Details',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
             ),
             TextFormField(
               onTap: () async {
@@ -276,12 +319,32 @@ class _UpdateScreenState extends State<UpdateScreen> {
                 }
               },
               controller: _eventAddressController,
-              decoration: const InputDecoration(labelText: 'Event Address'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Event Address',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
             ),
             TextFormField(
               keyboardType: TextInputType.number,
               controller: _eventPriceController,
-              decoration: const InputDecoration(labelText: 'Event Price'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Event Price',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -297,9 +360,13 @@ class _UpdateScreenState extends State<UpdateScreen> {
                         height: 100,
                         margin: const EdgeInsets.only(right: 10),
                         decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20)),
+                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.grey[800], // Placeholder color
+                        ),
                         child: selectedImages[i] == null
-                            ? const Icon(Icons.add)
+                            ? Icon(Icons.image,
+                                size: 50,
+                                color: Colors.white) // Placeholder icon
                             : Image.file(
                                 selectedImages[i]!,
                                 fit: BoxFit.cover,
@@ -311,20 +378,47 @@ class _UpdateScreenState extends State<UpdateScreen> {
             ),
             TextFormField(
               controller: _selectedFacilitiesController,
-              decoration: const InputDecoration(
-                  labelText: ' Facilities (Separate with new line)'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Facilities (Separate with new line)',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
               maxLines: null,
             ),
             TextFormField(
               controller: _selectedFoodItems,
-              decoration: const InputDecoration(
-                  labelText: 'Food Menu (Separate with new line)'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Food Menu (Separate with new line)',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
               maxLines: null,
             ),
             TextFormField(
               controller: _selectedTimeSlots,
-              decoration: const InputDecoration(
-                  labelText: 'Time slots (Separate with new line)'),
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Time slots (Separate with new line)',
+                labelStyle: TextStyle(color: Colors.white),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
               maxLines: null,
             ),
           ],

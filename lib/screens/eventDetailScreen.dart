@@ -1,3 +1,7 @@
+import 'package:custom_rating_bar/custom_rating_bar.dart';
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/components.dart';
+import 'package:event_manager/components/constants.dart';
 import 'package:event_manager/screens/historyscreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +30,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   String? _selectedTimeSlot;
   String? _selectedPaymentMetod;
   String? _selectedAdanvcedPay;
+  String? _selectedDate;
+
   List<String> _selectedFacilities = [];
   List<String> _selectedFoodItems = [];
   Future<void> _showBookingNotification(String eventName) async {
@@ -96,7 +102,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       var adminData = adminSnapshot.data() as Map<String, dynamic>;
       String accountNumber = adminData['accountnumber'] ?? '';
       String bankDetails = adminData['bankdetails'] ?? '';
-      String contactnumber = adminData['contact'];
+      String contactNumber = adminData['contact'];
 
       DocumentSnapshot eventSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -120,18 +126,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       String eventDetails = eventData['eventDetails'] ?? '';
       String eventPrice = eventData['eventPrice'] ?? '';
       List<String> imageUrls = List<String>.from(eventData['imageUrls'] ?? []);
-      List<String> availableTimeSlots =
-          List<String>.from(eventData['selectedTimeSlots'] ?? []);
-      availableTimeSlots.remove(_selectedTimeSlot);
+      List<Map<String, dynamic>> datesWithSlots =
+          List<Map<String, dynamic>>.from(eventData['datesWithSlots'] ?? []);
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.adminId)
-          .collection('events')
-          .doc(widget.eventId)
-          .update({
-        'selectedTimeSlots': availableTimeSlots,
-      });
+      // Update datesWithSlots to remove the selected time slot for the selected date
 
       DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -198,6 +196,26 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
 
       if (confirmBooking != null && confirmBooking) {
+        for (var dateSlot in datesWithSlots) {
+          if (dateSlot['date'] == _selectedDate) {
+            List<String> timeSlots =
+                List<String>.from(dateSlot['timeSlots'] ?? []);
+            timeSlots.remove(_selectedTimeSlot);
+            dateSlot['timeSlots'] = timeSlots;
+            break;
+          }
+        }
+
+        // Update event document with updated datesWithSlots
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.adminId)
+            .collection('events')
+            .doc(widget.eventId)
+            .update({
+          'datesWithSlots': datesWithSlots,
+        });
+
         // Proceed with booking
         await FirebaseFirestore.instance
             .collection('users')
@@ -208,7 +226,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           'eventName': eventName,
           'eventAddress': eventAddress,
           'eventCapacity': eventCapacity,
-          'eventDate': eventDate,
+          'eventDate': _selectedDate,
           'eventDetails': eventDetails,
           'eventPrice': eventPrice,
           'imageUrls': imageUrls,
@@ -218,10 +236,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           'bookingDate': Timestamp.now(),
           'accountNumber': accountNumber,
           'bankDetails': bankDetails,
-          'contactnumber': contactnumber,
-          'paymentmethod': _selectedPaymentMetod,
-          'advancepaymeny': _selectedAdanvcedPay,
-          'adminId': widget.adminId
+          'contactNumber': contactNumber,
+          'paymentMethod': _selectedPaymentMetod,
+          'advancePayment': _selectedAdanvcedPay,
+          'adminId': widget.adminId,
         });
 
         await FirebaseFirestore.instance
@@ -236,7 +254,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           'userContact': userContact,
           'eventName': eventName,
           'eventAddress': eventAddress,
-          'eventDate': eventDate,
+          'eventDate': _selectedDate,
           'selectedTimeSlot': _selectedTimeSlot,
           'bookingDate': Timestamp.now(),
         });
@@ -254,7 +272,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           'userContact': userContact,
           'eventName': eventName,
           'eventAddress': eventAddress,
-          'eventDate': eventDate,
+          'eventDate': _selectedDate,
           'selectedTimeSlot': _selectedTimeSlot,
           'bookingDate': Timestamp.now(),
         });
@@ -287,227 +305,306 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
+  late Future<DocumentSnapshot> _adminFuture;
+  late Stream<DocumentSnapshot> _eventStream;
   @override
   void initState() {
     super.initState();
     var initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        const AndroidInitializationSettings('@mipmap/ic_launcher');
     var initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
     flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
     );
+
     _loadUserData();
+
+    _adminFuture = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.adminId)
+        .get();
+
+    _eventStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.adminId)
+        .collection('events')
+        .doc(widget.eventId)
+        .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black, // Changed to black
+        foregroundColor: Colors.white,
         title: const Text('Event Details'),
       ),
-      body: Stack(children: [
-        FutureBuilder(
-          future: FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.adminId)
-              .get(),
-          builder: (context, AsyncSnapshot<DocumentSnapshot> adminSnapshot) {
-            if (adminSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (adminSnapshot.hasError) {
-              return Center(child: Text('Error: ${adminSnapshot.error}'));
-            }
-            if (!adminSnapshot.hasData || !adminSnapshot.data!.exists) {
-              return const Center(child: Text('Admin user not found.'));
-            }
+      backgroundColor: Colors.black, // Added to change background to black
+      body: Stack(
+        children: [
+          FutureBuilder(
+            future: _adminFuture,
+            builder: (context, AsyncSnapshot<DocumentSnapshot> adminSnapshot) {
+              if (adminSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (adminSnapshot.hasError) {
+                return Center(child: Text('Error: ${adminSnapshot.error}'));
+              }
+              if (!adminSnapshot.hasData || !adminSnapshot.data!.exists) {
+                return const Center(child: Text('Admin user not found.'));
+              }
 
-            var adminData = adminSnapshot.data!;
-            String accountNumber = adminData['accountnumber'] ?? '';
-            String bankDetails = adminData['bankdetails'] ?? '';
-            String contactnumbeer = adminData['contact'] ?? '';
-            return StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(widget.adminId)
-                  .collection('events')
-                  .doc(widget.eventId)
-                  .snapshots(),
-              builder:
-                  (context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
-                if (eventSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (eventSnapshot.hasError) {
-                  return Center(child: Text('Error: ${eventSnapshot.error}'));
-                }
-                if (!eventSnapshot.hasData || !eventSnapshot.data!.exists) {
-                  return const Center(child: Text('Event not found.'));
-                }
+              var adminData = adminSnapshot.data!;
+              String accountNumber = adminData['accountnumber'] ?? '';
+              String bankDetails = adminData['bankdetails'] ?? '';
+              String contactNumber = adminData['contact'] ?? '';
 
-                var eventData = eventSnapshot.data!;
-                String eventName = eventData['eventName'] ?? '';
-                String eventAddress = eventData['eventAddress'] ?? '';
-                String eventCapacity = eventData['eventCapacity'] ?? '';
-                String eventDate = eventData['eventDate'] ?? '';
-                String eventDetails = eventData['eventDetails'] ?? '';
-
-                double? rating;
-                var data = eventData.data() as Map<String, dynamic>;
-                if (data.containsKey('averageRating')) {
-                  if (data['averageRating'] is double) {
-                    rating = data['averageRating'] ?? 0;
-                  } else if (data['averageRating'] is String) {
-                    rating = double.tryParse(data['averageRating']) ?? 0;
+              return StreamBuilder(
+                stream: _eventStream,
+                builder:
+                    (context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
+                  if (eventSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
                   }
-                }
+                  if (eventSnapshot.hasError) {
+                    return Center(child: Text('Error: ${eventSnapshot.error}'));
+                  }
+                  if (!eventSnapshot.hasData || !eventSnapshot.data!.exists) {
+                    return const Center(child: Text('Event not found.'));
+                  }
 
-                String eventPrice = eventData['eventPrice'] ?? '';
-                List<String> imageUrls =
-                    List<String>.from(eventData['imageUrls'] ?? []);
-                List<String> availableFacilities =
-                    List<String>.from(eventData['selectedFacilities'] ?? []);
-                List<String> availableFoodItems =
-                    List<String>.from(eventData['selectedFoodItems'] ?? []);
-                List<String> availableTimeSlots =
-                    List<String>.from(eventData['selectedTimeSlots'] ?? []);
-                List<String> paymentmethod =
-                    List<String>.from(eventData['selectedpaymentmethod'] ?? []);
-                List<String> advancepayment =
-                    List<String>.from(eventData['advancepayment'] ?? []);
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: StatefulBuilder(
-                    builder: (BuildContext context, StateSetter setState) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  var eventData = eventSnapshot.data!;
+                  String eventName = eventData['eventName'] ?? '';
+                  String eventAddress = eventData['eventAddress'] ?? '';
+                  String eventCapacity = eventData['eventCapacity'] ?? '';
+                  String eventDetails = eventData['eventDetails'] ?? '';
+
+                  double? rating;
+                  var data = eventData.data() as Map<String, dynamic>;
+                  if (data.containsKey('averageRating')) {
+                    if (data['averageRating'] is double) {
+                      rating = data['averageRating'] ?? 0;
+                    } else if (data['averageRating'] is String) {
+                      rating = double.tryParse(data['averageRating']) ?? 0;
+                    }
+                  }
+                  num latitude = eventData['latitude'];
+                  num longitude = eventData['longitude'];
+                  String eventPrice = eventData['eventPrice'] ?? '';
+                  List<String> imageUrls =
+                      List<String>.from(eventData['imageUrls'] ?? []);
+                  List<String> availableFacilities =
+                      List<String>.from(eventData['selectedFacilities'] ?? []);
+                  List<String> availableFoodItems =
+                      List<String>.from(eventData['selectedFoodItems'] ?? []);
+                  List<String> availableTimeSlots =
+                      List<String>.from(eventData['selectedTimeSlots'] ?? []);
+                  List<String> paymentMethod = List<String>.from(
+                      eventData['selectedpaymentmethod'] ?? []);
+                  List<String> advancePayment =
+                      List<String>.from(eventData['advancepayment'] ?? []);
+
+                  // Correctly parse datesWithSlots
+                  Map<String, List<String>> datesWithSlots = {};
+                  if (eventData['datesWithSlots'] != null) {
+                    (eventData['datesWithSlots'] as List<dynamic>)
+                        .forEach((element) {
+                      datesWithSlots[element['date']] =
+                          List<String>.from(element['timeSlots']);
+                    });
+                  }
+                  return SingleChildScrollView(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        eventName,
+                        style: const TextStyle(
+                            fontSize: 25,
+                            color: kTextColor,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
                         children: [
-                          SizedBox(
-                            height: 200,
-                            width: double.infinity,
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    image: DecorationImage(
-                                      image: NetworkImage(
-                                        imageUrls.isNotEmpty
-                                            ? imageUrls[0]
-                                            : '',
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(8.0),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                  ),
-                                  child: Text(
-                                    eventName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          const Icon(
+                            Icons.map_rounded,
+                            color: kTextColor,
+                          ),
+                          const SizedBox(width: 10), // Adjust spacing as needed
+                          Expanded(
+                            child: Text(
+                              eventAddress,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 2, // Adjust as needed
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(height: 16.0),
-                          _buildSectionTitle('Date'),
-                          _buildSectionContent(eventDate),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Address'),
-                          _buildSectionContent(eventAddress),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Capacity'),
-                          _buildSectionContent(eventCapacity),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Price'),
-                          _buildSectionContent(eventPrice),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Details'),
-                          _buildSectionContent(eventDetails),
-                          if (rating != null) _buildSectionTitle('Rating'),
-                          _buildSectionContent(rating.toString()),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Contact no.'),
-                          _buildSectionContent(contactnumbeer),
+                        ],
+                      ),
+
+                      // Row(
+                      //   children: [
+                      //     const Icon(
+                      //       Icons.calendar_today_rounded,
+                      //       color: kTextColor,
+                      //     ),
+                      //     const SizedBox(width: 8),
+                      //     Text(
+                      //       eventDate,
+                      //       style: const TextStyle(
+                      //           fontSize: 16,
+                      //           color: Colors.white,
+                      //           fontWeight: FontWeight.bold),
+                      //     ),
+                      //   ],
+                      // ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.attach_money_rounded,
+                            color: kTextColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            eventPrice,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          Expanded(child: Container()),
+                          GestureDetector(
+                              onTap: () {
+                                if (latitude != null && longitude != null) {
+                                  _launchMaps(latitude, longitude);
+                                } else {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Error'),
+                                      content: const Text(
+                                          'Location coordinates not available.'),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          child: const Text('OK'),
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 5.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      'show on map',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              )),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.phone_iphone_rounded,
+                            color: kTextColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            contactNumber,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          Expanded(child: Container()),
                           GestureDetector(
                             onTap: () {
-                              _launchDialer(contactnumbeer);
+                              makePhoneCall(contactNumber);
                             },
-                            child: const SizedBox(
-                              height: 20,
-                              child: Text(
-                                'Contact Organizer',
-                                style: TextStyle(
-                                    color: Colors.blue,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: Colors.blue),
+                            child: const Text(
+                              'Contact Organizer',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.blue,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Facilities'),
-                          Wrap(
-                            spacing: 8.0,
-                            children: availableFacilities
-                                .map((facility) => CheckboxListTile(
-                                      title: Text(facility),
-                                      value: _selectedFacilities
-                                          .contains(facility),
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          if (value != null && value) {
-                                            _selectedFacilities.add(facility);
-                                          } else {
-                                            _selectedFacilities
-                                                .remove(facility);
-                                          }
-                                        });
-                                      },
-                                    ))
-                                .toList(),
+                        ],
+                      ),
+                      const SizedBox(height: 16.0),
+                      _buildSectionTitle('Available Time Slots'),
+
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: DropdownButton<String>(
+                          value: _selectedDate,
+                          hint: const Text(
+                            'Select Date',
+                            style: TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Food Menu'),
-                          Wrap(
-                            spacing: 8.0,
-                            children: availableFoodItems
-                                .map((foodItem) => CheckboxListTile(
-                                      title: Text(foodItem),
-                                      value:
-                                          _selectedFoodItems.contains(foodItem),
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          if (value != null && value) {
-                                            _selectedFoodItems.add(foodItem);
-                                          } else {
-                                            _selectedFoodItems.remove(foodItem);
-                                          }
-                                        });
-                                      },
-                                    ))
-                                .toList(),
-                          ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Available Time Slots'),
-                          Column(
-                            children: availableTimeSlots.isEmpty
+                          dropdownColor: Colors.black,
+                          items: datesWithSlots.keys.map((String date) {
+                            return DropdownMenuItem<String>(
+                              value: date,
+                              child: Text(
+                                date,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedDate = newValue;
+                              _selectedTimeSlot = null;
+                            });
+                          },
+                        ),
+                      ),
+                      if (_selectedDate != null)
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: datesWithSlots[_selectedDate]!.isEmpty
                                 ? [
                                     const Text(
-                                        'No time slots available to book.'),
+                                      'No slots available for this Date',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ]
-                                : availableTimeSlots
+                                : datesWithSlots[_selectedDate]!
                                     .map(
                                       (timeSlot) => RadioListTile<String>(
-                                        title: Text(timeSlot),
+                                        title: Text(
+                                          timeSlot,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
                                         value: timeSlot,
                                         groupValue: _selectedTimeSlot,
                                         onChanged: (String? value) {
@@ -519,101 +616,269 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                     )
                                     .toList(),
                           ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Payment Method'),
+                        ),
+                      const SizedBox(height: 10),
+
+                      // Column(
+                      //   crossAxisAlignment: CrossAxisAlignment.start,
+                      //   children: datesWithSlots[_selectedDate]!
+                      //       .map(
+                      //         (timeSlot) => RadioListTile<String>(
+                      //           title: Text(
+                      //             timeSlot,
+                      //             style: const TextStyle(color: Colors.white),
+                      //           ),
+                      //           value: timeSlot,
+                      //           groupValue: _selectedTimeSlot,
+                      //           onChanged: (String? value) {
+                      //             setState(() {
+                      //               _selectedTimeSlot = value;
+                      //             });
+                      //           },
+                      //         ),
+                      //       )
+                      //       .toList(),
+                      // ),
+                      const SizedBox(height: 16.0),
+                      _buildSectionTitle('Details'),
+                      ExpansionTile(
+                        title: const Text('Show Details',
+                            style: TextStyle(color: Colors.white)),
+                        children: [
                           Column(
-                            children: paymentmethod.isEmpty
-                                ? [
-                                    const Text(
-                                        'No time slots available to book.'),
-                                  ]
-                                : paymentmethod
-                                    .map(
-                                      (timeSlot) => RadioListTile<String>(
-                                        title: Text(timeSlot),
-                                        value: timeSlot,
-                                        groupValue: _selectedPaymentMetod,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedPaymentMetod = value;
-                                          });
-                                        },
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Images',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 200,
+                                width: double.infinity,
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  children: List.generate(
+                                    imageUrls.length,
+                                    (index) => Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0),
+                                      child: SizedBox(
+                                        height: 200,
+                                        width: 180,
+                                        child: Stack(
+                                          alignment: Alignment.bottomCenter,
+                                          children: [
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                image: DecorationImage(
+                                                  image: NetworkImage(
+                                                      imageUrls[index]),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    )
-                                    .toList(),
-                          ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Advance Payment'),
-                          Column(
-                            children: advancepayment.isEmpty
-                                ? [
-                                    const Text(
-                                        'No time slots available to book.'),
-                                  ]
-                                : advancepayment
-                                    .map(
-                                      (timeSlot) => RadioListTile<String>(
-                                        title: Text(timeSlot),
-                                        value: timeSlot,
-                                        groupValue: _selectedAdanvcedPay,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedAdanvcedPay = value;
-                                          });
-                                        },
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                          const SizedBox(height: 12.0),
-                          _buildSectionTitle('Account Number'),
-                          _buildSectionContent(accountNumber),
-                          const SizedBox(height: 12.0),
-                          availableTimeSlots.isEmpty
-                              ? const Center(child: Text('No Slots Available'))
-                              : Center(
-                                  child: ElevatedButton(
-                                    onPressed: _bookEvent,
-                                    child: const Text('Book Event'),
+                                    ),
                                   ),
                                 ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildSectionContent(eventDetails),
+                              _buildSectionTitle('Rating'),
+                              if (rating != null)
+                                _buildSectionContent(rating.toString()),
+                              RatingBar.readOnly(
+                                isHalfAllowed: true,
+                                size: 20,
+                                filledIcon: Icons.star,
+                                emptyIcon: Icons.star_border,
+                                halfFilledIcon: Icons.star_half,
+                                initialRating: rating != null ? rating : 0.0,
+                                maxRating: 5,
+                              ),
+                              const SizedBox(height: 12.0),
+                              _buildSectionTitle('Facilities'),
+                              Wrap(
+                                spacing: 8.0,
+                                children: availableFacilities
+                                    .map(
+                                      (facility) => CheckboxListTile(
+                                        title: Text(
+                                          facility,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
+                                        value: _selectedFacilities
+                                            .contains(facility),
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            if (value != null && value) {
+                                              _selectedFacilities.add(facility);
+                                            } else {
+                                              _selectedFacilities
+                                                  .remove(facility);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 12.0),
+                              _buildSectionTitle('Food Menu'),
+                              Wrap(
+                                spacing: 8.0,
+                                children: availableFoodItems
+                                    .map(
+                                      (foodItem) => CheckboxListTile(
+                                        title: Text(
+                                          foodItem,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
+                                        value: _selectedFoodItems
+                                            .contains(foodItem),
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            if (value != null && value) {
+                                              _selectedFoodItems.add(foodItem);
+                                            } else {
+                                              _selectedFoodItems
+                                                  .remove(foodItem);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 12.0),
+                              _buildSectionTitle('Payment Method'),
+                              Column(
+                                children: paymentMethod.isEmpty
+                                    ? [
+                                        const Text(
+                                            'No payment methods available.'),
+                                      ]
+                                    : paymentMethod
+                                        .map(
+                                          (method) => RadioListTile<String>(
+                                            title: Text(
+                                              method,
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                            value: method,
+                                            groupValue: _selectedPaymentMetod,
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedPaymentMetod = value;
+                                              });
+                                            },
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+                              const SizedBox(height: 12.0),
+                              _buildSectionTitle('Advance Payment'),
+                              Column(
+                                children: advancePayment.isEmpty
+                                    ? [
+                                        const Text(
+                                            'No advance payment options available.'),
+                                      ]
+                                    : advancePayment
+                                        .map(
+                                          (option) => RadioListTile<String>(
+                                            title: Text(
+                                              option,
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                            value: option,
+                                            groupValue: _selectedAdanvcedPay,
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedAdanvcedPay = value;
+                                              });
+                                            },
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+                              const SizedBox(height: 12.0),
+                              _buildSectionTitle('Account Number'),
+                              _buildSectionContent(accountNumber),
+                              const SizedBox(height: 12.0),
+                            ],
+                          ),
                         ],
-                      );
-                    },
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        if (_isBooking) const Center(child: CircularProgressIndicator())
-      ]),
+                      ),
+                      const SizedBox(height: 16.0),
+                      if (_selectedDate != null)
+                        datesWithSlots[_selectedDate]!.isEmpty
+                            ? const Center(
+                                child: Text(
+                                'No Slots Available',
+                                style: TextStyle(color: Colors.white),
+                              ))
+                            : Center(
+                                child: CustomButton(
+                                  buttonText: 'Book Event',
+                                  onPressed: _bookEvent,
+                                ),
+                              ),
+                    ],
+                  ));
+                },
+              );
+            },
+          ),
+          if (_isBooking) const Center(child: loadingWidget())
+        ],
+      ),
     );
   }
 
-  void _launchDialer(String phoneNumber) async {
-    final url = 'tel:$phoneNumber';
-    if (await canLaunch(url)) {
-      await launch(url);
+  void _launchMaps(num latitude, num longitude) async {
+    final url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
     } else {
       throw 'Could not launch $url';
     }
+  }
+
+  Future<void> makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    await launchUrl(launchUri);
   }
 
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+          fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
     );
   }
 
   Widget _buildSectionContent(String content) {
     return Text(
       content,
-      style: const TextStyle(fontSize: 18),
+      style: const TextStyle(fontSize: 18, color: Colors.white),
     );
   }
 }

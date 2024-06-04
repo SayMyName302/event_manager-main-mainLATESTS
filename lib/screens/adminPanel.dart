@@ -1,3 +1,4 @@
+import 'package:event_manager/components/constants.dart';
 import 'package:event_manager/components/provider.dart';
 import 'package:event_manager/screens/admin.dart';
 import 'package:event_manager/screens/bookedEventsByusers.dart';
@@ -27,7 +28,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     try {
       await FirebaseAuth.instance.signOut();
       Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
           (Route<dynamic> route) => false);
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -63,16 +64,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        foregroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 22, 22, 22),
         title: const Text('Admin Panel'),
       ),
       drawer: Drawer(
+        backgroundColor: Colors.black,
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
             DrawerHeader(
               decoration: const BoxDecoration(
-                color: Colors.blue,
+                color: kTextColor,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,14 +112,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.account_circle),
-              title: const Text('Profile'),
+              title: const Text(
+                'Profile',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => UserProfileScreen(
-                      userEmail: email!,
-                    ),
+                    builder: (context) => UserProfileScreen(),
                   ),
                 );
 
@@ -122,22 +131,90 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.feedback),
-              title: const Text('Feedback'),
+              leading: const Icon(Icons.account_box),
+              title: const Text(
+                'Account',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
               onTap: () {
                 // Navigate to feedback page
               },
             ),
             ListTile(
-              leading: const Icon(Icons.contact_mail),
-              title: const Text('Contact Us'),
+              leading: const Icon(Icons.language),
+              title: const Text(
+                'App Language',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () {
+                // Navigate to feedback page
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.support),
+              title: const Text(
+                'Support',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () {
+                // Navigate to feedback page
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text(
+                'Invite a Friend',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () {
+                // Navigate to feedback page
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.update),
+              title: const Text(
+                'App Updates',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
               onTap: () {
                 // Navigate to contact us page
               },
             ),
             ListTile(
+              leading: const Icon(Icons.more),
+              title: const Text(
+                'Check More',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: _logout,
+            ),
+            ListTile(
               leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
               onTap: _logout,
             ),
           ],
@@ -149,6 +226,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AdminPanelCard(
+              backgroundColor: Colors.red,
               title: 'Add Events',
               imageUrl: 'assets/images/add.png',
               onTap: () {
@@ -162,8 +240,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 // Handle Add Events tap
               },
             ),
-            const SizedBox(height: 20),
             AdminPanelCard(
+              backgroundColor: Color.fromARGB(255, 192, 122, 250),
               title: 'View/Edit Events',
               imageUrl: 'assets/images/editdel.png',
               onTap: () {
@@ -178,6 +256,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               },
             ),
             AdminPanelCard(
+              backgroundColor: Color.fromARGB(255, 108, 191, 247),
               title: 'Booked Events',
               imageUrl: 'assets/images/ticket.png',
               onTap: () {
@@ -185,7 +264,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        AdminBookedEventsScreen(adminId: username),
+                        AdminBookedEventsScreen(adminId: userdocid),
                   ),
                 );
 
@@ -204,36 +283,77 @@ class AdminPanelCard extends StatelessWidget {
 
   final VoidCallback onTap;
   final String imageUrl;
-
+  final Color backgroundColor;
   const AdminPanelCard({
     Key? key,
     required this.title,
     required this.onTap,
     required this.imageUrl,
+    required this.backgroundColor,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Image.asset(imageUrl, height: 40, width: 40),
-          const SizedBox(height: 10),
-          Center(
-              child: RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: const TextStyle(fontSize: 12, color: Colors.black),
-              children: title.split(' ').map((word) {
-                return TextSpan(
-                  text: word + '\n',
-                );
-              }).toList(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
+          child: Material(
+            color: Colors.transparent,
+            elevation: 20,
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromARGB(255, 114, 114, 114),
+                    blurRadius: 2.0,
+                    spreadRadius: 0.0,
+                    offset: Offset(2.0, 2.0),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        height: 50,
+                        child: Image.asset(
+                          imageUrl,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                            child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                            children: title.split(' ').map((word) {
+                              return TextSpan(
+                                text: word + '\n',
+                              );
+                            }).toList(),
+                          ),
+                        ))
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ))
-        ],
-      ),
-    );
+          ),
+        ));
   }
 }

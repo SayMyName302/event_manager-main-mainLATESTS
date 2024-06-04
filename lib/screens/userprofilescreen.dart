@@ -1,11 +1,15 @@
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/constants.dart';
+import 'package:event_manager/screens/login_screen.dart';
+import 'package:event_manager/shared/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final String userEmail;
-
-  const UserProfileScreen({Key? key, required this.userEmail})
-      : super(key: key);
+  const UserProfileScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
@@ -26,6 +30,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _accountNumberController = TextEditingController();
     _bankdetailsController = TextEditingController();
     fetchUserDetails();
+    _loadUserData();
+  }
+
+  late String username = "";
+  late String email = "";
+  late String userid = "";
+  late String userdocid = "";
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      email = prefs.getString('email') ?? "";
+
+      username = prefs.getString('username') ?? "";
+      userid = prefs.getString('userid') ?? "";
+      userdocid = prefs.getString('userdocid') ?? "";
+    });
   }
 
   @override
@@ -42,7 +62,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
           .instance
           .collection('users')
-          .where('email', isEqualTo: widget.userEmail)
+          .where('email', isEqualTo: email)
           .get();
 
       if (snapshot.docs.isNotEmpty) {
@@ -55,7 +75,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           isAdmin = data['isAdmin'] ?? false;
         });
       } else {
-        print('No user found with email: ${widget.userEmail}');
+        print('No user found with email: ${email}');
       }
     } catch (e) {
       print('Error fetching user details: $e');
@@ -64,10 +84,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   void updateUserDetails() async {
     try {
+      setState(() {
+        deleteing = true;
+      });
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
           .instance
           .collection('users')
-          .where('email', isEqualTo: widget.userEmail)
+          .where('email', isEqualTo: email)
           .get();
 
       if (snapshot.docs.isNotEmpty) {
@@ -78,22 +101,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           'accountnumber': isAdmin ? null : _accountNumberController.text,
           'bankdetails': isAdmin ? null : _bankdetailsController.text
         });
+        setState(() {
+          deleteing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Details updated successfully')));
+        Future.delayed(Duration(seconds: 2));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(),
+          ),
+        );
       } else {
-        print('No user found with email: ${widget.userEmail}');
+        setState(() {
+          deleteing = false;
+        });
+        print('No user found with email: ${email}');
       }
     } catch (e) {
+      setState(() {
+        deleteing = false;
+      });
       print('Error updating user details: $e');
     }
   }
 
+  bool deleteing = false;
   void deleteUserAccount() async {
     try {
+      setState(() {
+        deleteing = true;
+      });
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
           .instance
           .collection('users')
-          .where('email', isEqualTo: widget.userEmail)
+          .where('email', isEqualTo: email)
           .get();
 
       if (snapshot.docs.isNotEmpty) {
@@ -102,14 +145,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             .collection('users')
             .doc(docId)
             .delete();
+
+        setState(() {
+          deleteing = false;
+        });
         Future.delayed(const Duration(seconds: 2));
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account deleted successfully')));
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       } else {
-        print('No user found with email: ${widget.userEmail}');
+        setState(() {
+          deleteing = false;
+        });
+        print('No user found with email: ${email}');
       }
     } catch (e) {
+      setState(() {
+        deleteing = false;
+      });
       print('Error deleting user account: $e');
     }
   }
@@ -118,43 +171,153 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
         title: const Text('User Profile'),
+        backgroundColor: const Color.fromARGB(255, 54, 54, 54),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
-            ),
-            TextFormField(
-              controller: _contactController,
-              decoration: const InputDecoration(labelText: 'Contact'),
-            ),
-            if (!isAdmin)
+      backgroundColor: Colors.grey[900],
+      body: Stack(children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               TextFormField(
-                controller: _accountNumberController,
-                decoration: const InputDecoration(labelText: 'Account Number'),
+                controller: _usernameController,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
-            if (!isAdmin)
+              SizedBox(height: 10),
               TextFormField(
-                controller: _bankdetailsController,
-                decoration: const InputDecoration(labelText: 'Payment method'),
+                controller: _contactController,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Contact',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: updateUserDetails,
-              child: const Text('Update Details'),
-            ),
-            ElevatedButton(
-              onPressed: deleteUserAccount,
-              child: const Text('Delete Account'),
-            ),
-          ],
+              SizedBox(height: 10),
+              if (isAdmin)
+                TextFormField(
+                  controller: _accountNumberController,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Account Number',
+                    labelStyle: TextStyle(color: Colors.white),
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              if (isAdmin) SizedBox(height: 10),
+              if (isAdmin)
+                TextFormField(
+                  controller: _bankdetailsController,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Payment method',
+                    labelStyle: TextStyle(color: Colors.white),
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: updateUserDetails,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kTextColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+                child: const Text(
+                  'Update Details',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  bool confirmDelete = await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        backgroundColor: Colors.grey[900],
+                        title: const Text(
+                          'Confirm Deletion',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        content: const Text(
+                          'Are you sure you want to delete your account? This action cannot be undone.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.grey[300],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red[700],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmDelete) {
+                    deleteUserAccount();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kTextColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+                child: const Text(
+                  'Delete Account',
+                  style: TextStyle(color: Colors.white),
+                ),
+              )
+            ],
+          ),
         ),
-      ),
+        if (deleteing) Center(child: loadingWidget())
+      ]),
     );
   }
 }

@@ -1,5 +1,8 @@
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/bottomNavProvider.dart';
 import 'package:event_manager/components/provider.dart';
 import 'package:event_manager/screens/adminPanel.dart';
+import 'package:event_manager/components/bottomNav.dart';
 
 import 'package:event_manager/screens/login_screen.dart';
 import 'package:event_manager/screens/mainscreen.dart';
@@ -34,9 +37,12 @@ void main() async {
   });
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UserData(),
-      child: MainApp(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BottomTabsPageProvider()),
+        Provider<FirebaseMessaging>.value(value: _firebaseMessaging),
+      ],
+      child: const MainApp(),
     ),
   );
 }
@@ -53,11 +59,10 @@ class MainApp extends StatelessWidget {
         future: _isLoggedIn(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator(); // or a loading indicator
+            return const loadingWidget2(); // or a loading indicator
           } else {
-            final isLoggedIn = snapshot.data ?? false;
             return MaterialApp(
-              home: isLoggedIn ? AdminPanelScreen() : HomeScreen(),
+              home: const LoginScreen(),
               theme: ThemeData(
                 textTheme: const TextTheme(
                   bodyMedium: TextStyle(

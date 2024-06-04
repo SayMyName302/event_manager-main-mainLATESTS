@@ -1,53 +1,89 @@
 import 'package:custom_rating_bar/custom_rating_bar.dart';
+import 'package:event_manager/components/LoadingWidget.dart';
+import 'package:event_manager/components/components.dart';
+import 'package:event_manager/components/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HistoryScreen extends StatefulWidget {
-  final String userDocId;
-
-  const HistoryScreen({Key? key, required this.userDocId}) : super(key: key);
+  const HistoryScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _HistoryScreenState createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  void _launchDialer(String phoneNumber) async {
-    final url = 'tel:$phoneNumber';
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
-    }
+  Future<void> makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    await launchUrl(launchUri);
+  }
+
+  late String username = "";
+  late String email = "";
+  late String userid = "";
+  late String userdocid = "";
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      email = prefs.getString('email') ?? "";
+      username = prefs.getString('username') ?? "";
+      userid = prefs.getString('userid') ?? "";
+      userdocid = prefs.getString('userdocid') ?? "";
+    });
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    _loadUserData();
+  }
+
+  String _searchQuery = '';
+  TextEditingController _searchController = TextEditingController();
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('Bookings'),
+        backgroundColor: const Color.fromARGB(255, 43, 43, 43),
+        foregroundColor: Colors.white, // Red app bar
       ),
-      body: widget.userDocId.isEmpty
+      body: userdocid.isEmpty
           ? const Center(
               child: Text(
                 'No user ID provided',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             )
           : FutureBuilder(
-              future: _fetchBookings(widget.userDocId),
+              future: _fetchBookings(userdocid),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: loadingWidget2());
                 }
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
                       'Error: ${snapshot.error}',
                       style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w600),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   );
                 }
@@ -55,120 +91,154 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   return const Center(
                     child: Text(
                       'No bookings available',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   );
                 }
 
                 List<DocumentSnapshot> bookings = snapshot.data!.docs;
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    DocumentSnapshot booking = bookings[index];
-                    DateTime dateTime =
-                        (booking['bookingDate'] as Timestamp).toDate();
-                    String formattedDate =
-                        '${dateTime.day}-${dateTime.month}-${dateTime.year}';
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 5,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                booking['eventName'],
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+
+                // Filter bookings by event name
+                List<DocumentSnapshot> filteredBookings =
+                    bookings.where((booking) {
+                  String eventName =
+                      booking['eventName'].toString().toLowerCase();
+                  return eventName.contains(_searchQuery.toLowerCase());
+                }).toList();
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: CustomTextField2(
+                        controller: _searchController,
+                        hinttext: 'Search event by name',
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredBookings.length,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot booking = filteredBookings[index];
+                          DateTime dateTime =
+                              (booking['bookingDate'] as Timestamp).toDate();
+                          String formattedDate =
+                              '${dateTime.day}-${dateTime.month}-${dateTime.year}';
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Card(
+                              color: Color.fromARGB(255, 36, 36, 36),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Booked On:',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                formattedDate,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                booking['eventDetails'],
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  _launchDialer(
-                                    booking['contactnumber'],
-                                  );
-                                },
-                                child: SizedBox(
-                                  height: 20,
-                                  child: Text(
-                                    'Contact Organizer',
-                                    style: TextStyle(
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: Colors.blue),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        _navigateToBookingDetails(booking);
+                                    Text(
+                                      booking['eventName'],
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Booked On:',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      formattedDate,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      booking['eventDetails'],
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    GestureDetector(
+                                      onTap: () {
+                                        makePhoneCall(booking['contactnumber']);
                                       },
-                                      child: const Text(
-                                        'View Details',
-                                        style: TextStyle(
-                                          color: Colors.deepPurple,
+                                      child: SizedBox(
+                                        height: 20,
+                                        child: Text(
+                                          'Contact Organizer',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            decoration:
+                                                TextDecoration.underline,
+                                            decorationColor: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                    TextButton(
-                                      onPressed: () {
-                                        _showRatingDialog(booking);
-                                      },
-                                      child: const Text(
-                                        'Rate This Event',
-                                        style: TextStyle(
-                                          color: Colors.deepPurple,
-                                        ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          TextButton(
+                                            onPressed: () {
+                                              _navigateToBookingDetails(
+                                                  booking);
+                                            },
+                                            child: const Text(
+                                              'View Details',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              _showRatingDialog(booking);
+                                            },
+                                            child: const Text(
+                                              'Rate This Event',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 );
               },
             ),
@@ -199,11 +269,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
         double rating = 0;
         TextEditingController commentController = TextEditingController();
         return AlertDialog(
-          title: const Text('Rate This Event'),
+          backgroundColor: Colors.black, // Dark background dialog
+          title: const Text(
+            'Rate This Event',
+            style: TextStyle(color: Colors.red), // Red title
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Give a rating'),
+              const Text(
+                'Give a rating',
+                style: TextStyle(color: Colors.white), // White text
+              ),
               RatingBar(
                 filledIcon: Icons.star,
                 emptyIcon: Icons.star_border,
@@ -220,14 +297,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white), // White text
+              ),
             ),
             TextButton(
               onPressed: () {
                 _submitRating(booking, rating, commentController.text);
                 Navigator.of(context).pop();
               },
-              child: const Text('Submit'),
+              child: const Text(
+                'Submit',
+                style: TextStyle(color: Colors.white), // White text
+              ),
             ),
           ],
         );
@@ -286,7 +369,10 @@ class BookingDetailsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Details'),
+        backgroundColor: const Color.fromARGB(255, 44, 44, 44),
+        foregroundColor: Colors.white, // Dark background color for app bar
       ),
+      backgroundColor: Colors.black, // Dark background color for scaffold body
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
@@ -324,6 +410,7 @@ class BookingDetailsScreen extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            color: Colors.white, // White text color
           ),
         ),
         const SizedBox(height: 4),
@@ -331,6 +418,7 @@ class BookingDetailsScreen extends StatelessWidget {
           value.toString(),
           style: const TextStyle(
             fontSize: 18,
+            color: Colors.white, // White text color
           ),
         ),
         const SizedBox(height: 12),

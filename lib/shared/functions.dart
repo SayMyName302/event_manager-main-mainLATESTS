@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:location/location.dart';
 
 class SignIn {
   Future<dynamic> signInWithGoogle() async {
@@ -44,8 +47,14 @@ class SignIn {
     }
   }
 
-  static Future<void> saveUserData(String username, String email,
-      String contact, String accountnumber, String bankdetails) async {
+  static Future<void> saveUserData(
+      String username,
+      String email,
+      String contact,
+      String accountnumber,
+      String bankdetails,
+      BuildContext context) async {
+    String? token = await FirebaseMessaging.instance.getToken();
     final CollectionReference users =
         FirebaseFirestore.instance.collection('users');
     FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -62,11 +71,21 @@ class SignIn {
         'accountnumber': accountnumber,
         'deviceId': deviceId,
         'bankdetails': bankdetails,
+        'token': token,
+
         // Add other fields as needed
       });
-      sendNotification(deviceId, "Bhenchod", "deya");
+      // sendNotification(deviceId, "Bhenchod", "deya");
     } else {
-      // Username already exists
+      const snackBar = SnackBar(
+        content: Text('Username or email already exists'),
+      );
+
+// Find the ScaffoldMessenger in the widget tree
+// and use it to show a SnackBar.
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+      // Username or email already exists
       throw Exception('Username or email already exists');
     }
   }
