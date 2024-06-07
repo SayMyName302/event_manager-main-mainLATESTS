@@ -166,14 +166,15 @@ class _HomeScreenState extends State<HomeScreen> {
       await auth.signOut();
       await googleSignIn.signOut();
       SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      await prefs.setBool('isAdmin', false);
+      await prefs.setBool('isUser', false);
       await prefs.clear();
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (Route<dynamic> route) => false,
       );
-
-      await prefs.setBool('isUserLoggedIn', false);
     } catch (e) {
       print('Error logging out: $e');
     }
@@ -774,7 +775,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           if (events.isEmpty) {
                                             return const Center(
                                                 child: Text(
-                                              'No Popular Events found',
+                                              'No Recomended Events found',
                                               style: TextStyle(
                                                   color: Colors.white),
                                             ));

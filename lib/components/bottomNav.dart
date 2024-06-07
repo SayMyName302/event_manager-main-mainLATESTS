@@ -1,6 +1,7 @@
 import 'package:event_manager/components/LoadingWidget.dart';
 import 'package:event_manager/components/bottomNavProvider.dart';
 import 'package:event_manager/components/bottomNavWidget.dart';
+import 'package:event_manager/shared/exitdialog.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';

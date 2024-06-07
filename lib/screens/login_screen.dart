@@ -92,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return userId;
   }
 
+  bool isUserLoggedIn = false;
   Future<String?> _fetchUserdocIdFromFirestore(String email) async {
     String? userId;
     try {
@@ -119,7 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return userId;
   }
 
-  bool isAdminLoggedIn = false;
   Future<String?> _fetchUsernameFromFirestore(String email) async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
             .limit(1) // Limit to 1 document
             .get();
     setState(() {
-      isAdminLoggedIn = true;
+      isUserLoggedIn = true;
     });
 
     // Check if there's a document with the specified email
@@ -349,6 +349,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     final bool isAdmin =
                                         await checkAdmin(_email);
                                     if (isAdmin) {
+                                      SharedPreferences prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setBool('isLoggedIn', true);
+                                      await prefs.setBool('isAdmin', true);
+                                      await prefs.setBool('isUser', false);
+
                                       _navigateToAdminScreen(context);
                                     } else {
                                       _setSavingState(false);
@@ -389,6 +395,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                             'userdocid', userId2!);
                                         await prefs.setBool(
                                             'isUserLoggedIn', true);
+
+                                        await prefs.setBool('isLoggedIn', true);
+                                        await prefs.setBool('isAdmin', false);
+                                        await prefs.setBool('isUser', true);
 
                                         print('object');
                                         print(userId2);

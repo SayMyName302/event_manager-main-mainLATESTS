@@ -4,6 +4,7 @@ import 'package:event_manager/screens/admin.dart';
 import 'package:event_manager/screens/bookedEventsByusers.dart';
 import 'package:event_manager/screens/editDeleteScreen.dart';
 import 'package:event_manager/screens/login_screen.dart';
+import 'package:event_manager/screens/userprofileAdmin.dart';
 import 'package:event_manager/shared/functions.dart';
 import 'package:event_manager/shared/routes.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,13 +28,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Future<void> _logout() async {
     try {
       await FirebaseAuth.instance.signOut();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      await prefs.setBool('isAdmin', false);
+      await prefs.setBool('isUser', false);
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (Route<dynamic> route) => false);
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', false);
-      await prefs.setBool('isAdminLoggedIn', false);
     } catch (e) {
       print("Error logging out: $e");
     }
@@ -123,7 +124,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => UserProfileScreen(),
+                    builder: (context) => const AdminProfileScreen(),
                   ),
                 );
 
@@ -195,16 +196,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 // Navigate to contact us page
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.more),
-              title: const Text(
+            const ListTile(
+              leading: Icon(Icons.more),
+              title: Text(
                 'Check More',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                 ),
               ),
-              onTap: _logout,
             ),
             ListTile(
               leading: const Icon(Icons.logout),
@@ -241,7 +241,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               },
             ),
             AdminPanelCard(
-              backgroundColor: Color.fromARGB(255, 192, 122, 250),
+              backgroundColor: const Color.fromARGB(255, 192, 122, 250),
               title: 'View/Edit Events',
               imageUrl: 'assets/images/editdel.png',
               onTap: () {
@@ -256,15 +256,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               },
             ),
             AdminPanelCard(
-              backgroundColor: Color.fromARGB(255, 108, 191, 247),
+              backgroundColor: const Color.fromARGB(255, 108, 191, 247),
               title: 'Booked Events',
               imageUrl: 'assets/images/ticket.png',
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AdminBookedEventsScreen(adminId: userdocid),
+                    builder: (context) => const AdminBookedEventsScreen(),
                   ),
                 );
 

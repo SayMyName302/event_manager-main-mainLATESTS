@@ -33,6 +33,9 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
   bool isDeleting = false;
   Future<void> deleteEvent(BuildContext context, String userId, String eventId,
       String eventName, List<String> imageUrls) async {
+    bool confirmDelete = await _showConfirmationDialog(context);
+    if (!confirmDelete) return;
+
     try {
       setState(() {
         isDeleting = true;
@@ -46,11 +49,8 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
           .delete();
 
       for (int i = 0; i < imageUrls.length; i++) {
-        // Construct the reference to the image in Firebase Storage
         String imagePath = 'events/$userId/$eventName/$i.jpg';
         Reference imageRef = FirebaseStorage.instance.ref().child(imagePath);
-
-        // Delete the image
         await imageRef.delete();
       }
       setState(() {
@@ -73,6 +73,38 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
         ),
       );
     }
+  }
+
+  Future<bool> _showConfirmationDialog(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              backgroundColor: Colors.black,
+              title: const Text('Confirm Deletion',
+                  style: TextStyle(color: Colors.red)),
+              content: const Text('Are you sure you want to delete this event?',
+                  style: TextStyle(color: Colors.white)),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child:
+                      const Text('Cancel', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child:
+                      const Text('Delete', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   TextEditingController searchController = TextEditingController();
@@ -111,7 +143,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                       .get(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
+                      return const Center(
                         child: loadingWidget(),
                       );
                     }
@@ -138,7 +170,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                       builder: (context, eventsSnapshot) {
                         if (eventsSnapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return Center(
+                          return const Center(
                             child: loadingWidget2(),
                           );
                         }
@@ -218,25 +250,25 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                       children: [
                                         Text(
                                           eventDoc['eventName'],
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 20,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.calendar_today,
-                                                color: Colors.white),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '${eventDoc['eventDate']}',
-                                              style: TextStyle(
-                                                  color: Colors.white),
-                                            ),
-                                          ],
-                                        ),
+                                        // Row(
+                                        //   children: [
+                                        //     const Icon(Icons.calendar_today,
+                                        //         color: Colors.white),
+                                        //     const SizedBox(width: 8),
+                                        //     Text(
+                                        //       '${eventDoc['eventDate']}',
+                                        //       style: TextStyle(
+                                        //           color: Colors.white),
+                                        //     ),
+                                        //   ],
+                                        // ),
                                         const SizedBox(height: 8),
                                         const Text(
                                           'Details',
@@ -248,7 +280,8 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           '${eventDoc['eventDetails']}',
-                                          style: TextStyle(color: Colors.white),
+                                          style: const TextStyle(
+                                              color: Colors.white),
                                         ),
                                         const SizedBox(height: 8),
                                         Row(
@@ -258,7 +291,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                             const SizedBox(width: 8),
                                             Text(
                                               'Capacity: ${eventDoc['eventCapacity']}',
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                   color: Colors.white),
                                             ),
                                           ],
@@ -271,7 +304,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                             const SizedBox(width: 8),
                                             Text(
                                               '${eventDoc['eventAddress']}',
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                   color: Colors.white),
                                             ),
                                           ],
@@ -284,7 +317,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                             const SizedBox(width: 8),
                                             Text(
                                               '${eventDoc['eventPrice']} -/Rs only',
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                   color: Colors.white),
                                             ),
                                           ],
@@ -342,7 +375,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                               return Chip(
                                                 label: Text(
                                                   facility,
-                                                  style: TextStyle(
+                                                  style: const TextStyle(
                                                       color: Colors.white),
                                                 ),
                                                 backgroundColor:
@@ -373,7 +406,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                               return Chip(
                                                 label: Text(
                                                   timeSlot,
-                                                  style: TextStyle(
+                                                  style: const TextStyle(
                                                       color: Colors.white),
                                                 ),
                                                 backgroundColor:
@@ -404,7 +437,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
                                               return Chip(
                                                 label: Text(
                                                   foodItem,
-                                                  style: TextStyle(
+                                                  style: const TextStyle(
                                                       color: Colors.white),
                                                 ),
                                                 backgroundColor:
@@ -427,7 +460,7 @@ class _EditDeleteScreenState extends State<EditDeleteScreen> {
               ),
             ],
           ),
-          if (isDeleting) Center(child: loadingWidget())
+          if (isDeleting) const Center(child: loadingWidget())
         ]),
       ),
     );

@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class UserProfileScreen extends StatefulWidget {
-  const UserProfileScreen({
+class AdminProfileScreen extends StatefulWidget {
+  const AdminProfileScreen({
     Key? key,
   }) : super(key: key);
 
   @override
-  _UserProfileScreenState createState() => _UserProfileScreenState();
+  _AdminProfileScreenState createState() => _AdminProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen> {
+class _AdminProfileScreenState extends State<AdminProfileScreen> {
   late TextEditingController _usernameController;
   late TextEditingController _contactController;
   late TextEditingController _accountNumberController;
@@ -206,7 +206,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
                 TextFormField(
                   controller: _contactController,
                   style: TextStyle(color: Colors.white),
@@ -227,50 +226,46 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10),
-                if (isAdmin)
-                  TextFormField(
-                    controller: _accountNumberController,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Account Number',
-                      labelStyle: TextStyle(color: Colors.white),
-                      filled: true,
-                      fillColor: Colors.grey[800],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide.none,
-                      ),
+                TextFormField(
+                  controller: _accountNumberController,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Account Number',
+                    labelStyle: TextStyle(color: Colors.white),
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide.none,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your account number';
-                      }
-                      return null;
-                    },
                   ),
-                if (isAdmin) SizedBox(height: 10),
-                if (isAdmin)
-                  TextFormField(
-                    controller: _bankdetailsController,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Payment method',
-                      labelStyle: TextStyle(color: Colors.white),
-                      filled: true,
-                      fillColor: Colors.grey[800],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide.none,
-                      ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your account number';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _bankdetailsController,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Payment method',
+                    labelStyle: TextStyle(color: Colors.white),
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide.none,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your payment method';
-                      }
-                      return null;
-                    },
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your payment method';
+                    }
+                    return null;
+                  },
+                ),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {

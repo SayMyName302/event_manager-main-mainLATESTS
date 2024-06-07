@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -87,6 +88,25 @@ class SignIn {
 
       // Username or email already exists
       throw Exception('Username or email already exists');
+    }
+  }
+
+  static Future<void> payWithCard() async {
+    try {
+      final paymentMethod = await Stripe.instance.createPaymentMethod(
+        params: PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(
+            billingDetails: BillingDetails(
+              name: 'Jane Doe',
+              email: 'jane.doe@example.com',
+            ),
+          ),
+        ),
+      );
+      print('Payment Method ID: ${paymentMethod.id}');
+      // Use this paymentMethod.id to complete the payment on your server
+    } catch (e) {
+      print('Error: $e');
     }
   }
 

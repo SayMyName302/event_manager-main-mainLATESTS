@@ -1,5 +1,6 @@
 import 'package:event_manager/components/bottomNavProvider.dart';
 import 'package:event_manager/components/constants.dart';
+import 'package:event_manager/shared/exitdialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,7 @@ class BottomNavWidget extends StatelessWidget {
         int previousPage = 0;
         return WillPopScope(
           onWillPop: () async {
+            showExitPopup(context);
             if (currentPage != 0) {
               bottomTabProvider.setCurrentPage(previousPage);
               return false;

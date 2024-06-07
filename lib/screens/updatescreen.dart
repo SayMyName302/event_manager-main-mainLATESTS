@@ -1,3 +1,4 @@
+import 'package:event_manager/components/LoadingWidget.dart';
 import 'package:event_manager/screens/admin.dart';
 import 'package:event_manager/screens/editDeleteScreen.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
     progressDialog = ProgressDialog(context);
   }
 
+  bool isLoading = false;
   ProgressDialog? progressDialog;
   @override
   void dispose() {
@@ -68,6 +70,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
     // Initialize the ProgressDialog
 
     try {
+      setState(() {
+        isLoading = true;
+      });
       List<String> imageURLs = [];
 
       // Delete previous images from Firebase Storage
@@ -100,9 +105,14 @@ class _UpdateScreenState extends State<UpdateScreen> {
           .collection('events')
           .doc(widget.eventId)
           .update({'imageUrls': imageURLs});
-
+      setState(() {
+        isLoading = false;
+      });
       // Optionally, you can update the UI or perform any other tasks here.
     } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
       print('Error uploading images and saving data: $e');
     }
   }
@@ -178,8 +188,10 @@ class _UpdateScreenState extends State<UpdateScreen> {
   }
 
   Future<void> updateEventData() async {
-    progressDialog!.show();
     try {
+      setState(() {
+        isLoading = true;
+      });
       await uploadImagesAndSaveData();
 
       final eventRef = FirebaseFirestore.instance
@@ -203,7 +215,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
         'selectedFoodItems': _selectedFoodItems.text.split('\n').toList(),
         'selectedTimeSlots': _selectedTimeSlots.text.split('\n').toList(),
       });
-      progressDialog!.hide();
+      setState(() {
+        isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Event updated successfully'),
@@ -211,7 +225,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
         ),
       );
     } catch (e) {
-      progressDialog!.hide();
+      setState(() {
+        isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update event: $e'),
@@ -236,194 +252,217 @@ class _UpdateScreenState extends State<UpdateScreen> {
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: () {
-              updateEventData();
+              if (_validateInputs(context)) {
+                updateEventData();
+              }
             },
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _eventNameController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Event Name',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            TextFormField(
-              controller: _eventCapacity,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Complex Capacity',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            TextFormField(
-              readOnly: true,
-              controller: _eventDateController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Event Date',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-              onTap: _pickDate,
-            ),
-            TextFormField(
-              readOnly: true,
-              controller: _eventDetailsController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Event Details',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-            TextFormField(
-              onTap: () async {
-                _selectedLocation = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SelectLocationScreen(),
+      body: Stack(children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _eventNameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Event Name',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
                   ),
-                );
-
-                if (_selectedLocation != null) {
-                  _eventAddressController.text = _selectedLocation!;
-                }
-              },
-              controller: _eventAddressController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Event Address',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
-            ),
-            TextFormField(
-              keyboardType: TextInputType.number,
-              controller: _eventPriceController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Event Price',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+              TextFormField(
+                controller: _eventCapacity,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Complex Capacity',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < 3; i++)
-                    GestureDetector(
-                      onTap: () => _addImage(i),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: Colors.grey[800], // Placeholder color
-                        ),
-                        child: selectedImages[i] == null
-                            ? Icon(Icons.image,
-                                size: 50,
-                                color: Colors.white) // Placeholder icon
-                            : Image.file(
-                                selectedImages[i]!,
-                                fit: BoxFit.cover,
-                              ),
-                      ),
+              TextFormField(
+                readOnly: true,
+                controller: _eventDetailsController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Event Details',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                ),
+              ),
+              TextFormField(
+                onTap: () async {
+                  _selectedLocation = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SelectLocationScreen(),
                     ),
-                ],
-              ),
-            ),
-            TextFormField(
-              controller: _selectedFacilitiesController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Facilities (Separate with new line)',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-              maxLines: null,
-            ),
-            TextFormField(
-              controller: _selectedFoodItems,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Food Menu (Separate with new line)',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+                  );
+
+                  if (_selectedLocation != null) {
+                    _eventAddressController.text = _selectedLocation!;
+                  }
+                },
+                controller: _eventAddressController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Event Address',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
-              maxLines: null,
-            ),
-            TextFormField(
-              controller: _selectedTimeSlots,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Time slots (Separate with new line)',
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+              TextFormField(
+                keyboardType: TextInputType.number,
+                controller: _eventPriceController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Event Price',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
-              maxLines: null,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < 3; i++)
+                      GestureDetector(
+                        onTap: () => _addImage(i),
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.grey[800],
+                          ),
+                          child: selectedImages[i] == null
+                              ? const Icon(Icons.image,
+                                  size: 50, color: Colors.white)
+                              : Image.file(selectedImages[i]!,
+                                  fit: BoxFit.cover),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              TextFormField(
+                controller: _selectedFacilitiesController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Facilities (Separate with new line)',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                ),
+                maxLines: null,
+              ),
+              TextFormField(
+                controller: _selectedFoodItems,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Food Menu (Separate with new line)',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                ),
+                maxLines: null,
+              ),
+              TextFormField(
+                controller: _selectedTimeSlots,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Time slots (Separate with new line)',
+                  labelStyle: TextStyle(color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
+                ),
+                maxLines: null,
+              ),
+            ],
+          ),
+        ),
+        if (isLoading) const Center(child: loadingWidget())
+      ]),
+    );
+  }
+
+  bool _validateInputs(BuildContext context) {
+    if (_eventNameController.text.isEmpty ||
+        _eventCapacity.text.isEmpty ||
+        _eventDetailsController.text.isEmpty ||
+        _eventAddressController.text.isEmpty ||
+        _eventPriceController.text.isEmpty ||
+        _selectedFacilitiesController.text.isEmpty ||
+        _selectedFoodItems.text.isEmpty ||
+        _selectedTimeSlots.text.isEmpty ||
+        selectedImages.isEmpty) {
+      _showErrorDialog(context, 'All fields must be filled');
+      return false;
+    }
+    return true;
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.black,
+          title: const Text('Error', style: TextStyle(color: Colors.red)),
+          content: Text(message, style: const TextStyle(color: Colors.white)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK', style: TextStyle(color: Colors.red)),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

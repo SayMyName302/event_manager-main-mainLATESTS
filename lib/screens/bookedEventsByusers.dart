@@ -4,14 +4,14 @@ import 'package:event_manager/components/LoadingWidget.dart';
 import 'package:event_manager/components/components.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 
 class AdminBookedEventsScreen extends StatefulWidget {
-  final String adminId;
-
-  const AdminBookedEventsScreen({Key? key, required this.adminId})
-      : super(key: key);
+  const AdminBookedEventsScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _AdminBookedEventsScreenState createState() =>
@@ -22,7 +22,21 @@ class _AdminBookedEventsScreenState extends State<AdminBookedEventsScreen> {
   @override
   void initState() {
     super.initState();
-    listenForNewBookings(widget.adminId);
+    _loadUserData();
+  }
+
+  late String username = "";
+  late String email = "";
+  late String userid = "";
+  late String userdocid = "";
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      email = prefs.getString('email') ?? "";
+      username = prefs.getString('username') ?? "";
+      userid = prefs.getString('userid') ?? "";
+      userdocid = prefs.getString('userdocid') ?? "";
+    });
   }
 
   TextEditingController searchController = TextEditingController();
@@ -54,7 +68,7 @@ class _AdminBookedEventsScreenState extends State<AdminBookedEventsScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
-                  .doc(widget.adminId)
+                  .doc(userdocid)
                   .collection('bookedEventsByUsers')
                   .snapshots(),
               builder: (context, snapshot) {

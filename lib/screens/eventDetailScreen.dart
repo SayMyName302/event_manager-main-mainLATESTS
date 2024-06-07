@@ -1,14 +1,19 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:custom_rating_bar/custom_rating_bar.dart';
 import 'package:event_manager/components/LoadingWidget.dart';
 import 'package:event_manager/components/components.dart';
 import 'package:event_manager/components/constants.dart';
 import 'package:event_manager/screens/historyscreen.dart';
+import 'package:event_manager/shared/functions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -53,6 +58,36 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     );
   }
 
+  Future<void> makePayment(int amount) async {
+    try {
+      print('Creating payment intent...');
+      // STEP 1: Create Payment Intent
+      var paymentIntent = await createPaymentIntent(amount.toString(), 'PKR');
+      print('Payment intent created: $paymentIntent');
+
+      // STEP 2: Initialize Payment Sheet
+      print('Initializing payment sheet...');
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret:
+              paymentIntent['client_secret'], // Gotten from payment intent
+          style: ThemeMode.light,
+          merchantDisplayName: 'Ikay',
+        ),
+      );
+      print('Payment sheet initialized');
+
+      // STEP 3: Display Payment sheet
+      print('Displaying payment sheet...');
+      await displayPaymentSheet();
+      print('Payment sheet displayed');
+    } catch (err) {
+      print('Error in makePayment: $err');
+      throw Exception(err);
+    }
+  }
+
+  Map<String, dynamic>? paymentIntent;
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -60,7 +95,90 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     });
   }
 
+  createPaymentIntent(String amount, String currency) async {
+    try {
+      //Request body
+      Map<String, dynamic> body = {
+        'amount': amount,
+        'currency': currency,
+      };
+
+      //Make post request to Stripe
+      var response = await http.post(
+        Uri.parse('https://api.stripe.com/v1/payment_intents'),
+        headers: {
+          'Authorization': 'Bearer ${dotenv.env['STRIPE_SECRET']}',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body,
+      );
+      return json.decode(response.body);
+    } catch (err) {
+      throw Exception(err.toString());
+    }
+  }
+
   bool _isBooking = false;
+  bool isPaid = false;
+  displayPaymentSheet() async {
+    try {
+      await Stripe.instance.presentPaymentSheet().then((value) {
+        setState(() {
+          isPaid = true;
+        });
+        showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 100.0,
+                      ),
+                      SizedBox(height: 10.0),
+                      Text("Payment Successful!"),
+                    ],
+                  ),
+                ));
+
+        paymentIntent = null;
+      }).onError((error, stackTrace) {
+        setState(() {
+          isPaid = false;
+        });
+        throw Exception(error);
+      });
+    } on StripeException catch (e) {
+      setState(() {
+        isPaid = false;
+      });
+      print('Error is:---> $e');
+      AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: const [
+                Icon(
+                  Icons.cancel,
+                  color: Colors.red,
+                ),
+                Text("Payment Failed"),
+              ],
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        isPaid = false;
+      });
+      print('$e');
+    }
+  }
+
   Future<void> _bookEvent() async {
     if (_selectedTimeSlot != null && !_isBooking) {
       setState(() {
@@ -157,7 +275,19 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         advancePaymentPercentage = 0.2;
       } else if (_selectedAdanvcedPay == '50%') {
         advancePaymentPercentage = 0.5;
+      } else if (_selectedAdanvcedPay == '10%') {
+        advancePaymentPercentage = 0.1;
+      } else if (_selectedAdanvcedPay == '40%') {
+        advancePaymentPercentage = 0.4;
+      } else if (_selectedAdanvcedPay == '60%') {
+        advancePaymentPercentage = 0.6;
+      } else if (_selectedAdanvcedPay == '70%') {
+        advancePaymentPercentage = 0.7;
+      } else if (_selectedAdanvcedPay == '80%') {
+        advancePaymentPercentage = 0.8;
       }
+      else if (_selectedAdanvcedPay == '90%') {
+advancePaymentPercentage = 0.9;
       double advancePayment =
           double.parse(eventPrice) * advancePaymentPercentage;
 
@@ -186,7 +316,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(true); // Yes, confirm booking
+                  Navigator.of(context).pop(true);
+
+                  // Yes, confirm booking
                 },
                 child: const Text('Confirm'),
               ),
@@ -196,111 +328,119 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
 
       if (confirmBooking != null && confirmBooking) {
-        for (var dateSlot in datesWithSlots) {
-          if (dateSlot['date'] == _selectedDate) {
-            List<String> timeSlots =
-                List<String>.from(dateSlot['timeSlots'] ?? []);
-            timeSlots.remove(_selectedTimeSlot);
-            dateSlot['timeSlots'] = timeSlots;
-            break;
+        await makePayment(advancePayment.toInt());
+        if (isPaid) {
+          for (var dateSlot in datesWithSlots) {
+            if (dateSlot['date'] == _selectedDate) {
+              List<String> timeSlots =
+                  List<String>.from(dateSlot['timeSlots'] ?? []);
+              timeSlots.remove(_selectedTimeSlot);
+              dateSlot['timeSlots'] = timeSlots;
+              break;
+            }
           }
-        }
 
-        // Update event document with updated datesWithSlots
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.adminId)
-            .collection('events')
-            .doc(widget.eventId)
-            .update({
-          'datesWithSlots': datesWithSlots,
-        });
+          // Update event document with updated datesWithSlots
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.adminId)
+              .collection('events')
+              .doc(widget.eventId)
+              .update({
+            'datesWithSlots': datesWithSlots,
+          });
 
-        // Proceed with booking
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userdocid)
-            .collection('bookings')
-            .add({
-          'eventId': widget.eventId,
-          'eventName': eventName,
-          'eventAddress': eventAddress,
-          'eventCapacity': eventCapacity,
-          'eventDate': _selectedDate,
-          'eventDetails': eventDetails,
-          'eventPrice': eventPrice,
-          'imageUrls': imageUrls,
-          'selectedTimeSlot': _selectedTimeSlot,
-          'selectedFacilities': _selectedFacilities,
-          'selectedFoodItems': _selectedFoodItems,
-          'bookingDate': Timestamp.now(),
-          'accountNumber': accountNumber,
-          'bankDetails': bankDetails,
-          'contactNumber': contactNumber,
-          'paymentMethod': _selectedPaymentMetod,
-          'advancePayment': _selectedAdanvcedPay,
-          'adminId': widget.adminId,
-        });
+          // Proceed with booking
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userdocid)
+              .collection('bookings')
+              .add({
+            'eventId': widget.eventId,
+            'eventName': eventName,
+            'eventAddress': eventAddress,
+            'eventCapacity': eventCapacity,
+            'eventDate': _selectedDate,
+            'eventDetails': eventDetails,
+            'eventPrice': eventPrice,
+            'imageUrls': imageUrls,
+            'selectedTimeSlot': _selectedTimeSlot,
+            'selectedFacilities': _selectedFacilities,
+            'selectedFoodItems': _selectedFoodItems,
+            'bookingDate': Timestamp.now(),
+            'accountNumber': accountNumber,
+            'bankDetails': bankDetails,
+            'contactNumber': contactNumber,
+            'paymentMethod': _selectedPaymentMetod,
+            'advancePayment': _selectedAdanvcedPay,
+            'adminId': widget.adminId,
+          });
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.adminId)
-            .collection('bookedEvents')
-            .add({
-          'eventId': widget.eventId,
-          'userId': userdocid,
-          'userName': userName,
-          'userEmail': userEmail,
-          'userContact': userContact,
-          'eventName': eventName,
-          'eventAddress': eventAddress,
-          'eventDate': _selectedDate,
-          'selectedTimeSlot': _selectedTimeSlot,
-          'bookingDate': Timestamp.now(),
-        });
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.adminId)
+              .collection('bookedEvents')
+              .add({
+            'eventId': widget.eventId,
+            'userId': userdocid,
+            'userName': userName,
+            'userEmail': userEmail,
+            'userContact': userContact,
+            'eventName': eventName,
+            'eventAddress': eventAddress,
+            'eventDate': _selectedDate,
+            'selectedTimeSlot': _selectedTimeSlot,
+            'bookingDate': Timestamp.now(),
+          });
 
-        // Add booking details to admin's bookedEventsByUsers collection
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.adminId)
-            .collection('bookedEventsByUsers')
-            .add({
-          'eventId': widget.eventId,
-          'userId': userdocid,
-          'userName': userName,
-          'userEmail': userEmail,
-          'userContact': userContact,
-          'eventName': eventName,
-          'eventAddress': eventAddress,
-          'eventDate': _selectedDate,
-          'selectedTimeSlot': _selectedTimeSlot,
-          'bookingDate': Timestamp.now(),
-        });
+          // Add booking details to admin's bookedEventsByUsers collection
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.adminId)
+              .collection('bookedEventsByUsers')
+              .add({
+            'eventId': widget.eventId,
+            'userId': userdocid,
+            'userName': userName,
+            'userEmail': userEmail,
+            'userContact': userContact,
+            'eventName': eventName,
+            'eventAddress': eventAddress,
+            'eventDate': _selectedDate,
+            'selectedTimeSlot': _selectedTimeSlot,
+            'bookingDate': Timestamp.now(),
+          });
 
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Thank You!'),
-              content: Text('Thank you for choosing $eventName.'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-        await _showBookingNotification(eventName);
-        ScaffoldMessenger.of(context).showSnackBar(
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Thank You!'),
+                content: Text('Thank you for choosing $eventName.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+          await _showBookingNotification(eventName);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Event booked successfully.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
           const SnackBar(
-            content: Text('Event booked successfully.'),
+            content: Text('Payment unsuccessfull'),
             duration: Duration(seconds: 2),
-          ),
-        );
+          );
+        }
       }
     }
   }
@@ -834,7 +974,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             : Center(
                                 child: CustomButton(
                                   buttonText: 'Book Event',
-                                  onPressed: _bookEvent,
+                                  onPressed: () {
+                                    _bookEvent();
+                                  },
                                 ),
                               ),
                     ],
