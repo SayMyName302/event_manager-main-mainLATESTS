@@ -285,9 +285,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         advancePaymentPercentage = 0.7;
       } else if (_selectedAdanvcedPay == '80%') {
         advancePaymentPercentage = 0.8;
+      } else if (_selectedAdanvcedPay == '90%') {
+        advancePaymentPercentage = 0.9;
       }
-      else if (_selectedAdanvcedPay == '90%') {
-advancePaymentPercentage = 0.9;
       double advancePayment =
           double.parse(eventPrice) * advancePaymentPercentage;
 
